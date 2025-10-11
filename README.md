@@ -14,26 +14,26 @@ Decodes CTL_CODE fields into their components:
 ### Device names and symbols
 Extracts literal device and symbolic link names present in decompiled strings (e.g. \Device\Foo, \DosDevices\Bar) to help identify device interfaces and user-visible handles.
 
-## Interesting opcode and API detection
+### Interesting opcode and API detection
 Reports occurrences of interesting opcodes (e.g. rdmsr, wrmsr, rdpmc) that are suspicious/high-privileged.
 Detects common C functions (e.g. sprintf, memcpy) and many WinAPI kernel functions (I/O, memory, object, and filter APIs) and prints the locations where they appear.
 
-# Vulnerability heuristics added
+### Vulnerability heuristics added
 The script contains several heuristics intended to highlight potentially dangerous code patterns (useful for triage — not proof of exploitability):
 
-# Physical memory & low-level IO
+### Physical memory & low-level IO
 Spots references like \Device\PhysicalMemory, calls to MmMapIoSpace / MmMapLockedPagesSpecifyCache, MmGetPhysicalAddress, and similar routines that indicate direct physical memory or MMIO access.
 
-# Unsafe user-copy patterns
+### Unsafe user-copy patterns
 Flags memcpy/memmove/RtlCopyMemory or C-style copy calls in IOCTL paths that are not preceded by calls to ProbeForRead/ProbeForWrite (or other safety checks), or not wrapped in structured exception handling, suggesting potential user→kernel copy issues.
 
-# Integer overflow / allocation heuristics
+### Integer overflow / allocation heuristics
 Finds ExAllocatePool/ExAllocatePoolWithTag/ExAllocatePoolWithQuota calls where the size argument is derived from user-supplied values without intermediate safe helpers (e.g. RtlULongMult, RtlULongAdd), signalling potential sized-allocation overflows.
 
-# Privilege gating / access checks
+### Privilege gating / access checks
 Highlights sensitive operations performed in IOCTL paths without nearby privilege or access checks (absence of SeSinglePrivilegeCheck, SeAccessCheck, etc.), a heuristic to find privileged operations exposed to user control.
 
-# I/O port or register access
+### I/O port or register access
 Looks for port I/O helpers or patterns that indicate read/write to hardware registers reachable from higher-level code.
 
 ### How it works:
