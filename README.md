@@ -1,7 +1,5 @@
 # Driver Buddy Revolutions for Ghidra
-By Juan Sacco <jsacco@exploitpack.com> 
-
-https://exploitpack.com
+By Juan Sacco <jsacco@exploitpack.com> Website: https://exploitpack.com
 
 ### How it works:
 Decompiler / listing: Uses Ghidra decompiler via DecompInterface to inspect function for dispatch-style artifacts and string literals.
