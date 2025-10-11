@@ -26,6 +26,7 @@ Uses presence/absence of known API calls and string/constant analysis to flag su
 
 # Credits:
 Based on: https://github.com/nccgroup/DriverBuddy
+
 Original DriverBuddy (IDA): https://github.com/nccgroup/DriverBuddy
 
 This is an extended version for Ghidra of the IDA plugin: https://github.com/VoidSec/DriverBuddyReloaded
