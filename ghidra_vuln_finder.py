@@ -277,9 +277,69 @@ if devices:
 else:
     lines.append("  - (none detected)")
 
-# ----------------------------- Pooltags (placeholder) ----------------------
+# ----------------------------- Pooltags (improved) ----------------------
 lines.append("[>] Searching for `Pooltags`...")
-lines.append("  - (none detected)")
+
+def _looks_printable_ascii(tag_str):
+    return all(32 <= ord(ch) <= 126 for ch in tag_str)
+
+def _decode_pooltag(val):
+    # Convert 0xAABBCCDD to 'DDCCBBAA' bytes -> string
+    v = val & 0xFFFFFFFF
+    bs = [(v >> (8*i)) & 0xFF for i in range(4)]  # little-endian byte order as used by Windows pool tags
+    s = ''.join(chr(b) for b in bs)
+    return s
+
+def _likely_pooltag_dword(val):
+    s = _decode_pooltag(val)
+    if not _looks_printable_ascii(s):
+        return False
+    # Require at least 2 alnum characters to reduce noise
+    alnum = sum(ch.isalnum() for ch in s)
+    return alnum >= 2
+
+def _collect_pooltags():
+    tags = {}  # tag -> set(callers)
+    listing = currentProgram.getListing()
+    alloc_names = ['ExAllocatePool', 'ExAllocatePoolWithTag', 'ExAllocatePool2', 'ExFreePoolWithTag']
+    for func in listing.getFunctions(True):
+        fname = func.getName()
+        try:
+            insns = [i for i in listing.getInstructions(func.getBody(), True)]
+        except Exception:
+            continue
+        for idx, instr in enumerate(insns):
+            if not is_call_to(instr, alloc_names):
+                continue
+            # walk backward up to ~8 instructions to find a 32-bit immediate that looks like a tag
+            for j in range(max(0, idx-8), idx):
+                ins = insns[j]
+                try:
+                    for opi in range(ins.getNumOperands()):
+                        sc = ins.getScalar(opi)
+                        if sc is None:
+                            continue
+                        val = sc.getValue() & 0xFFFFFFFF
+                        if _likely_pooltag_dword(val):
+                            tag = _decode_pooltag(val)
+                            # trim non-printables to be safe
+                            tag = ''.join(ch if 32 <= ord(ch) <= 126 else '.' for ch in tag)
+                            if tag not in tags:
+                                tags[tag] = set()
+                            tags[tag].add(fname)
+                except Exception:
+                    pass
+    return tags
+
+_pooltags = _collect_pooltags()
+
+if _pooltags:
+    drv = currentProgram.getName()
+    for tag in sorted(_pooltags.keys()):
+        callers = sorted(_pooltags[tag])
+        lines.append("  - {0} - {1} - Called by: {2}".format(tag, drv, ", ".join(callers)))
+else:
+    lines.append("  - (none detected)")
 
 # ----------------------------- Opcode / C / APIs ---------------------------
 lines.append("[>] Searching for interesting opcodes...")
